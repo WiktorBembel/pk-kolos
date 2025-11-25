@@ -1,0 +1,43 @@
+#pragma once
+#include<vector>
+class Zbior
+{
+	size_t m_liczbaElementow = 0;
+	double* m_elementy = nullptr;
+	double m_dolnaGranica = 0;
+	double m_gornaGranica = 0;
+	void alokuj(int);
+	void zwolnij();
+public:
+	Zbior() noexcept;
+	Zbior(size_t liczElem, double dGran, double gGran);
+	std::vector<double> toVector() const;
+	~Zbior();
+	Zbior& operator+=(size_t n);
+
+	Zbior(Zbior&& other)noexcept;
+	Zbior(const Zbior&) = delete;
+	Zbior& operator=(const Zbior&) = delete;
+	Zbior& operator=(Zbior&&) noexcept;
+
+	friend void testMoveAssignment();
+	friend class BrakElemX;
+	friend void krok7(const std::array<Zbior, 20>&, int);
+
+};
+
+struct BrakElemX
+{
+	double x;
+public:
+	BrakElemX(double wartosc): x(wartosc){}
+	bool operator()(const Zbior& z)const
+	{
+		for (size_t i = 0; i < z.m_liczbaElementow; ++i)
+		{
+			if (z.m_elementy[i] == x)
+				return false;
+		}
+		return true;
+	}
+};
