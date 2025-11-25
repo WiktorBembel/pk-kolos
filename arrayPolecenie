@@ -1,0 +1,21 @@
+Skopiuj do swojego projektu kod klasy Zbior z plików zbior.h i zbior.cpp. Następnie:
+1) Zdefiniuj mechanizm konwersji nieformalnej z klasy Zbiór do typu std::vector zwracający wewnętrzną tablicę
+elementów w postaci std::vector.
+2) Dla klasy Zbiór zdefiniuj operator +=, dodający do zbioru n (argument operatora) nowych elementów (wylosuj je tą
+samą metodą co robi to konstruktor argumentowy). Zabezpiecz operator asercją przed podaniem ujemnej liczby n.
+3) Dla klasy Zbiór zdefiniuj operator przenoszenia tak aby działał zgodnie z koncepcją kopii głębokiej. Jawnie wyklucz
+wszystkie pozostałe mechanizmy kopiowania i przenoszenia.
+4) Napisz test jednostkowy sprawdzający poprawność działania operatora przenoszącego z polecenia 3 – czy prawidłowo
+przenosi zasób.
+5) Zdefiniuj predykat unarny w postaci funktora, który zwraca prawdę, gdy Instancja Zbioru, nie zawiera elementu
+o wartości x (dowolna wartość całkowita podana przy tworzeniu instancji funktora).
+6) Utwórz tablicę T (std::array) elementów typu Zbiór o 20 instancjach. Każda instancja Zbioru ma mieć losową liczbę
+elementów z zakresu [10,40]. Granice losowania elementów wewnętrznych dla instancji Zbioru, określ w dowolny
+sensowny sposób.
+7) Korzystając z funkcji bibliotecznej, utwórz nowy wektor instancji Zbioru, który zawiera tylko ten instancje z tablicy T,
+które spełniają predykat z polecenia 5. Następnie korzystając z funkcji bibliotecznych i lambdy utwórz kolejny wektor
+zawierający same liczebności elementów poszczególnych instancji Zbioru zebranych w tablicy T. Wyświetl ten drugi
+wektor.
+Uwaga, jeśli wykonanie, któregoś z poleceń 5-7 wymaga użycia jakiegoś wykluczonego składnika klasy z poplecenia 3, to
+zdefiniuj tek składnik tak aby działał zgodnie z zasadą kopii głębokiej. Dopisz przy nim komentarz, które polecenie wymaga
+zdefiniowania tego składnika i dlaczego. Nie definiuj innych składników na zapas!
