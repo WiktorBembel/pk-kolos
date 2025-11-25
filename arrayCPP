@@ -1,0 +1,219 @@
+#include "array.h"
+#include <new>
+#include <random>
+#include <cassert>
+#include<vector>
+#include<iostream>
+#include<array>
+
+void Zbior::alokuj(int n)
+{
+	assert(n > 0);
+	m_elementy = new(std::nothrow) double[n]{};
+	m_liczbaElementow = n;
+}
+
+void Zbior::zwolnij()
+{
+	delete[] m_elementy;
+}
+
+Zbior::Zbior(size_t liczElem, double dGran, double gGran)
+: m_dolnaGranica(dGran), m_gornaGranica(gGran)
+{
+	alokuj(liczElem);
+	std::uniform_real_distribution<double> zakres(dGran, gGran);
+	std::random_device generator;
+	for (int elem = 0; elem < liczElem; elem++)
+		m_elementy[elem] = zakres(generator);
+}
+Zbior::~Zbior()
+{
+	zwolnij();
+}
+
+std::vector<double> Zbior::toVector() const
+{
+	std::vector<double> wynik;
+	wynik.reserve(m_liczbaElementow);
+
+	for (size_t i = 0; i < m_liczbaElementow; i++)
+		wynik.push_back(m_elementy[i]);
+
+	return wynik;
+}
+
+Zbior& Zbior::operator+=(size_t n)
+{
+    if (n == 0) return *this;
+
+    // Nowa wielkość tablicy
+    size_t nowyRozmiar = m_liczbaElementow + n;
+
+    // Alokujemy nową tablicę
+    double* nowa = new(std::nothrow) double[nowyRozmiar];
+    if (!nowa)
+        return *this; // brak pamięci – nic nie robimy
+
+    // Przepisujemy stare elementy
+    for (size_t i = 0; i < m_liczbaElementow; i++)
+        nowa[i] = m_elementy[i];
+
+    // Losujemy nowe wartości do końca tablicy
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> los(m_dolnaGranica, m_gornaGranica);
+
+    for (size_t i = m_liczbaElementow; i < nowyRozmiar; i++)
+        nowa[i] = los(gen);
+
+    // Usuwamy starą tablicę
+    delete[] m_elementy;
+
+    // Aktualizujemy wskaźnik i liczbę elementów
+    m_elementy = nowa;
+    m_liczbaElementow = nowyRozmiar;
+
+    return *this;
+}
+
+Zbior& Zbior::operator=(Zbior&& other) noexcept
+{
+    if (this == &other)
+        return *this;
+
+    zwolnij();
+
+    m_liczbaElementow = other.m_liczbaElementow;
+    m_elementy = other.m_elementy;
+    m_dolnaGranica = other.m_dolnaGranica;
+    m_gornaGranica = other.m_gornaGranica;
+
+    other.m_liczbaElementow = 0;
+    other.m_elementy = nullptr;
+    other.m_dolnaGranica = 0.0;
+    other.m_gornaGranica = 0.0;
+
+    return *this;
+}
+Zbior::Zbior() noexcept
+{
+    m_liczbaElementow = 0;
+    m_elementy = nullptr;
+    m_dolnaGranica = 0.0;
+    m_gornaGranica = 0.0;
+}
+
+void testMoveAssignment()
+{
+    std::cout << "\n=== Test operatora przenoszącego ===\n";
+
+    Zbior z1(5, 1.0, 10.0);
+
+    // zapamiętujemy ORYGINALNE wartości z1
+    double* oldPtr = z1.m_elementy;
+    size_t oldCount = z1.m_liczbaElementow;
+    double oldDolna = z1.m_dolnaGranica;
+    double oldGorna = z1.m_gornaGranica;
+
+    Zbior z2(1, 0.0, 1.0); // obiekt celowy, ma nadpisane wartości
+
+    z2 = std::move(z1);   // TESTOWANY operator = (move)
+
+    // --- TEST 1: czy wskaźnik PRZENIESIONY? ---
+    std::cout << "[1] Przeniesienie zasobu: "
+        << (z2.m_elementy == oldPtr ? "PASS" : "FAIL") << "\n";
+
+    // --- TEST 2: czy poprawnie liczba elementów? ---
+    std::cout << "[2] Liczba elementów przeniesiona: "
+        << (z2.m_liczbaElementow == oldCount ? "PASS" : "FAIL") << "\n";
+
+    // --- TEST 3: granice przeniesione ---
+    bool graniceOk = (z2.m_dolnaGranica == oldDolna && z2.m_gornaGranica == oldGorna);
+    std::cout << "[3] Przeniesione granice: " << (graniceOk ? "PASS" : "FAIL") << "\n";
+
+    // --- TEST 4: źródło wyzerowane ---
+    bool z1empty = (z1.m_elementy == nullptr &&
+        z1.m_liczbaElementow == 0 &&
+        z1.m_dolnaGranica == 0.0 &&
+        z1.m_gornaGranica == 0.0);
+
+    std::cout << "[4] Obiekt źródłowy wyzerowany: " << (z1empty ? "PASS" : "FAIL") << "\n";
+}
+
+void testFunktora()
+{
+    Zbior a(5, 1.0, 5.0);
+
+    BrakElemX P(3.0);
+
+    if (P(a))
+        std::cout << "Zbior NIE zawiera 3\n";
+    else
+        std::cout << "Zbior zawiera 3\n";
+}
+std::array<Zbior, 20> generujTabliceT()
+{
+    std::array<Zbior, 20> T;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::uniform_int_distribution<int> losIlosc(10, 40);
+    std::uniform_real_distribution<double> losDol(1.0, 50.0);
+    std::uniform_real_distribution<double> losZakres(5.0, 50.0);
+
+    for (auto& z : T)
+    {
+        int ile = losIlosc(gen);
+        double d = losDol(gen);
+        double g = d + losZakres(gen);
+
+        z = Zbior(ile, d, g);
+    }
+
+    return T;
+}
+// KROK 7
+void krok7(const std::array<Zbior, 20>& T, int x)
+{
+    BrakElemX P(x);   // predykat z zadania 5
+
+    // --- 1: filtrujemy instancje spełniające predykat
+    std::vector<Zbior> V1;
+    std::copy_if(
+        T.begin(),
+        T.end(),
+        std::back_inserter(V1),
+        [&](const Zbior& z) { return P(z); }
+    );
+
+    // --- 2: tworzymy wektor liczebności elementów
+    std::vector<size_t> V2;
+    V2.reserve(V1.size());
+
+    std::transform(
+        V1.begin(),
+        V1.end(),
+        std::back_inserter(V2),
+        [](const Zbior& z) { return z.m_liczbaElementow; }
+    );
+
+    // --- 3: wyświetlamy wynik
+    std::cout << "\nLiczebności elementów wybranych zbiorów:\n";
+    for (size_t n : V2)
+        std::cout << n << " ";
+
+    std::cout << "\n\n";
+}
+
+int main()
+{
+    testMoveAssignment();
+    testFunktora();
+    auto T = generujTabliceT();
+    krok7(T, 3);
+}
+
+
+
