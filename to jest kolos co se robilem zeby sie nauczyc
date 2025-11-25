@@ -1,0 +1,156 @@
+#include "jaranie.h"
+#include <new>
+#include <random>
+#include <cassert>
+#include<iostream>
+
+void Zbior::alokuj(int n)
+{
+	assert(n > 0);
+	m_elementy = new(std::nothrow) double[n]{};
+	m_liczbaElementow = n;
+
+}
+
+void Zbior::zwolnij()
+{
+	delete[] m_elementy;
+}
+
+Zbior::Zbior(size_t liczElem, double dGran, double gGran)
+: m_dolnaGranica(dGran), m_gornaGranica(gGran)
+{
+	alokuj(liczElem);
+	std::uniform_real_distribution<double> zakres(dGran, gGran);
+	std::random_device generator;
+	for (int elem = 0; elem < liczElem; elem++)
+		m_elementy[elem] = zakres(generator);
+}
+Zbior::~Zbior()
+{
+	zwolnij();
+}
+
+ Zbior::operator double() const
+{
+	return (m_dolnaGranica + m_gornaGranica) / 2.0;
+}
+
+ Zbior& Zbior::operator--()
+ {
+	 if (m_liczbaElementow == 0)
+		 return *this;
+
+	 std::random_device rd;
+	 std::mt19937 gen(rd());
+	 std::uniform_int_distribution<int> los(0, m_liczbaElementow - 1);
+	 int idx = los(gen);
+
+	 for (size_t i = idx; i < m_liczbaElementow - 1; i++)
+	 {
+		 m_elementy[i] = m_elementy[i + 1];
+	 }
+	 m_liczbaElementow--;
+	 return *this;
+ }
+ Zbior::Zbior(Zbior&& other) noexcept
+	 :m_liczbaElementow(other.m_liczbaElementow),
+	 m_elementy(other.m_elementy),
+	 m_dolnaGranica(other.m_dolnaGranica),
+	 m_gornaGranica(other.m_gornaGranica)
+ {
+	 other.m_elementy = nullptr;
+	 other.m_liczbaElementow = 0;
+	 other.m_dolnaGranica = 0.0;
+	 other.m_gornaGranica = 0.0;
+ }
+  void testKonstruktora()
+ {
+	 Zbior z1(5, 1.0, 10.0);
+
+	 double* oldPtr = z1.m_elementy;
+	 size_t oldCount = z1.m_liczbaElementow;
+	 Zbior z2 = std::move(z1);
+
+	 std::cout << (z2.m_elementy == oldPtr ? "PASS\n" : "FAIL\n");
+
+	 // TEST 2: liczba elementów przeniesiona
+	 std::cout << (z2.m_liczbaElementow == oldCount ? "PASS\n" : "FAIL\n");
+
+	 // TEST 3: z1 wyzerowany (pusty po przeniesieniu)
+	 std::cout << (z1.m_elementy == nullptr ? "PASS\n" : "FAIL\n");
+	 std::cout << (z1.m_liczbaElementow == 0 ? "PASS\n" : "FAIL\n");
+
+ }
+  void testPredykatX()
+  {
+	  Zbior z1(5, 1.0, 10.0);
+	  Zbior z2(10, 1.0, 10.0);
+
+	  PredykatX P(7);
+	  std::cout << "z1: " << (P(z1) ? "TAK" : "NIE") << std::endl;
+	  std::cout << "z2: " << (P(z2) ? "TAK" : "NIE") << std::endl;
+  }
+  std::vector<Zbior> testVector()
+  {
+	  std::random_device rd;
+	  std::mt19937 gen(rd());
+
+	  int n;
+	  std::cout << "Podaj liczbe" << std::endl;
+	  std::cin >> n;
+	  if (n < 10)n = 10;
+
+	  std::vector<Zbior>V;
+	  V.reserve(n);
+
+	  std::uniform_int_distribution<int>losElem(10, 20);
+	  std::uniform_real_distribution<double>losDol(1.0, 50.0);
+	  std::uniform_real_distribution<double>losPlus(2.0, 20.0);
+
+	  for (int i = 0; i < n; i++)
+	  {
+		  int ile = losElem(gen);
+		  double d = losDol(gen);
+		  double g = d + losPlus(gen);
+
+		  V.emplace_back(ile, d, g);
+	  }
+	  std::cout << "Utworzono " << n << "instancji" << std::endl;
+	  return V;
+  }
+  void testPredykatWektor(const std::vector<Zbior>& V, int x)
+  {
+	  PredykatX P(x);//predykat z 5
+
+	  auto lambda = [](const Zbior& z)//drugi predykat, lambda z konwersja do double
+		  {
+			  double val = (double)z;//uzycie double
+			  return val > 5.0 && val < 20.0;//przedzial (5,20)
+
+		  };
+	  std::vector<Zbior>W;
+
+	  std::copy_if(
+		  V.begin(),
+		  V.end(),
+		  std::back_inserter(W),
+		  [&](const Zbior& z)
+		  {
+			  return P(z) && lambda(z);
+		  }
+	  );
+	  std::cout << "Wybrano " << W.size() << "instancji " << std::endl;
+  }
+  int main()
+  {
+	  testKonstruktora();
+	  testPredykatX();
+
+	  int x = 12;
+	  auto V = testVector();
+
+	  testPredykatWektor(V,x);
+
+	  
+  }
