@@ -1,0 +1,35 @@
+#pragma once
+class Zbior
+{
+	size_t m_liczbaElementow = 0;
+	double* m_elementy = nullptr;
+	double m_dolnaGranica = 0;
+	double m_gornaGranica = 0;
+	void alokuj(int);
+	void zwolnij();
+public:
+	Zbior(size_t liczElem, double dGran, double gGran);
+
+	operator double() const;
+	Zbior& operator--();
+	Zbior(Zbior&& other) noexcept;
+	Zbior(const Zbior& other) = default;//wymaga wlaczenia
+	Zbior& operator=(const Zbior& other) = delete;
+	Zbior& operator=(Zbior&& other) = delete;
+	friend void testKonstruktora();
+	friend class PredykatX;
+
+	~Zbior();
+	
+};
+class PredykatX
+{
+	int x;
+public:
+	PredykatX(int x_): x(x_){}
+
+	bool operator()(const Zbior& z) const
+	{
+		return (int)z.m_liczbaElementow <= x;
+	}
+};
