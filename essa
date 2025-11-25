@@ -1,1 +1,224 @@
-esssa
+ZBIOR.H
+#pragma once
+#include <vector>
+#include <iostream>
+#include <algorithm>
+
+class Zbior
+{
+	size_t m_liczbaElementow = 0;
+	double* m_elementy = nullptr;
+	double m_dolnaGranica = 0;
+	double m_gornaGranica = 0;
+
+	void alokuj(int);
+	void zwolnij();
+
+public:
+	Zbior();
+	Zbior(size_t liczElem, double dGran, double gGran);
+	Zbior(const Zbior& other);
+	~Zbior();
+
+	operator std::vector<double>() const;
+	Zbior& operator+=(int n);
+	Zbior& operator=(Zbior&& other);
+
+	Zbior(Zbior&& other);
+	Zbior& operator=(const Zbior&) = delete;
+
+	size_t getLiczbaElementow() const { return m_liczbaElementow; }
+	double* getElementy() const { return m_elementy; }
+	void wypisz() const {
+		for (size_t i = 0; i < m_liczbaElementow; ++i) std::cout << m_elementy[i] << " ";
+		std::cout << "\n";
+	}
+};
+
+
+ZBIOR.cpp
+#include "zbior.h"
+#include <new>
+#include <random>
+#include <cassert>
+#include <cstring>
+
+void Zbior::alokuj(int n)
+{
+	assert(n >= 0);
+	if (n == 0) {
+		m_elementy = nullptr;
+		m_liczbaElementow = 0;
+		return;
+	}
+	m_elementy = new(std::nothrow) double[n] {};
+	m_liczbaElementow = n;
+}
+
+void Zbior::zwolnij()
+{
+	delete[] m_elementy;
+	m_elementy = nullptr;
+	m_liczbaElementow = 0;
+}
+
+Zbior::Zbior() : m_liczbaElementow(0), m_elementy(nullptr), m_dolnaGranica(0), m_gornaGranica(0) {}
+
+Zbior::Zbior(size_t liczElem, double dGran, double gGran)
+	: m_dolnaGranica(dGran), m_gornaGranica(gGran)
+{
+	alokuj(liczElem);
+	std::uniform_real_distribution<double> zakres(dGran, gGran);
+	std::random_device generator;
+	for (size_t elem = 0; elem < liczElem; elem++)
+		m_elementy[elem] = zakres(generator);
+}
+
+Zbior::Zbior(const Zbior& other)
+	: m_dolnaGranica(other.m_dolnaGranica), m_gornaGranica(other.m_gornaGranica)
+{
+	alokuj(other.m_liczbaElementow);
+	if (m_elementy && other.m_elementy) {
+		std::copy(other.m_elementy, other.m_elementy + m_liczbaElementow, m_elementy);
+	}
+}
+
+Zbior::~Zbior()
+{
+	zwolnij();
+}
+
+Zbior::operator std::vector<double>() const
+{
+	std::vector<double> v;
+	v.reserve(m_liczbaElementow);
+	for (size_t i = 0; i < m_liczbaElementow; ++i) {
+		v.push_back(m_elementy[i]);
+	}
+	return v;
+}
+
+Zbior& Zbior::operator+=(int n)
+{
+	assert(n >= 0);
+
+	if (n == 0) return *this;
+
+	size_t nowyRozmiar = m_liczbaElementow + n;
+	double* nowaTablica = new(std::nothrow) double[nowyRozmiar];
+
+	if (m_elementy) {
+		for (size_t i = 0; i < m_liczbaElementow; ++i) {
+			nowaTablica[i] = m_elementy[i];
+		}
+	}
+
+	std::uniform_real_distribution<double> zakres(m_dolnaGranica, m_gornaGranica);
+	std::random_device generator;
+	for (size_t i = m_liczbaElementow; i < nowyRozmiar; ++i) {
+		nowaTablica[i] = zakres(generator);
+	}
+
+	zwolnij();
+	m_elementy = nowaTablica;
+	m_liczbaElementow = nowyRozmiar;
+
+	return *this;
+}
+
+Zbior& Zbior::operator=(Zbior&& other)
+{
+	if (this != &other) {
+		zwolnij();
+		m_elementy = other.m_elementy;
+		m_liczbaElementow = other.m_liczbaElementow;
+		m_dolnaGranica = other.m_dolnaGranica;
+		m_gornaGranica = other.m_gornaGranica;
+
+		other.m_elementy = nullptr;
+		other.m_liczbaElementow = 0;
+	}
+	return *this;
+}
+//Byl potrzebny do std::move ktore korzysta z przenoszenia
+Zbior::Zbior(Zbior&& other)
+	: m_dolnaGranica(other.m_dolnaGranica), m_gornaGranica(other.m_gornaGranica)
+{
+	
+	alokuj(other.m_liczbaElementow);
+	if (m_elementy && other.m_elementy) {
+		std::copy(other.m_elementy, other.m_elementy + m_liczbaElementow, m_elementy);
+	}
+}
+
+
+MAIN.CPP
+#include <iostream>
+#include <vector>
+#include <array>
+#include <algorithm>
+#include <iterator>
+#include "zbior.h"
+void testPrzenoszenia()
+{
+	size_t n = 10;
+	Zbior z1(n, 1.0, 10.0);
+	double* adresZ1 = z1.getElementy();
+
+	Zbior z2;
+	z2 = std::move(z1);
+
+	if (z2.getElementy() == adresZ1 && z2.getLiczbaElementow() == n && z1.getElementy() == nullptr && z1.getLiczbaElementow() == 0) {
+		std::cout << "Test przenoszenia: OK\n";
+	}
+	else {
+		std::cout << "Test przenoszenia: BLAD\n";
+	}
+}
+class NieZawiera {
+private:
+public:
+	int x;
+	NieZawiera(int wartosc) : x(wartosc) {}
+
+	bool operator()(const Zbior& z) const {
+		std::vector<double> v = std::vector<double>(z);
+		for (double val : v) {
+			if (static_cast<int>(val) == x) {
+				return false;
+			}
+		}
+		return true;
+	}
+};
+
+int main()
+{
+
+	testPrzenoszenia();
+	std::array<Zbior, 20> T;
+
+	for (int i = 0; i < 20; ++i) {
+		size_t size = 10 + rand() % 31;
+		T[i] = Zbior(size, 0.0, 100.0);
+	}
+
+	std::vector<Zbior> wektorZbiorow;
+	int szukanaWartosc = 50;
+
+	std::copy_if(T.begin(), T.end(), std::back_inserter(wektorZbiorow), NieZawiera(szukanaWartosc));
+
+	std::vector<size_t> wektorLiczebnosci;
+	std::transform(wektorZbiorow.begin(), wektorZbiorow.end(), std::back_inserter(wektorLiczebnosci),
+		[](const Zbior& z) {
+			return z.getLiczbaElementow();
+		}
+	);
+
+	for (size_t s : wektorLiczebnosci) {
+		std::cout << s << " ";
+	}
+	std::cout << "\n";
+
+	return 0;
+}
